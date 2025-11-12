@@ -1,0 +1,139 @@
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import { API_URL } from './constants'
+import type {
+  ApiResponse,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  User,
+  Expense,
+  PaginatedResponse,
+  CreateExpenseRequest,
+  UpdateExpenseStatusRequest,
+  ExpenseFilters,
+  AdminStats,
+  AuditLogEntry,
+  UpdateProfileRequest,
+} from '@/types/api.types'
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Request interceptor to add JWT token
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem('auth_token')
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      // Unauthorized - clear token and redirect to login
+      localStorage.removeItem('auth_token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+// Authentication
+export const authApi = {
+  login: async (data: LoginRequest): Promise<LoginResponse> => {
+    const response = await api.post<ApiResponse<LoginResponse>>('/auth/login', data)
+    return response.data.data!
+  },
+
+  register: async (data: RegisterRequest): Promise<LoginResponse> => {
+    const response = await api.post<ApiResponse<LoginResponse>>('/auth/register', data)
+    return response.data.data!
+  },
+
+  me: async (): Promise<User> => {
+    const response = await api.get<ApiResponse<User>>('/auth/me')
+    return response.data.data!
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    await api.post('/auth/change-password', { currentPassword, newPassword })
+  },
+
+  updateProfile: async (data: UpdateProfileRequest): Promise<User> => {
+    const response = await api.patch<ApiResponse<User>>('/profiles/me', data)
+    return response.data.data!
+  },
+}
+
+// Expenses
+export const expensesApi = {
+  list: async (filters?: ExpenseFilters): Promise<PaginatedResponse<Expense>> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<Expense>>>('/expenses', {
+      params: filters,
+    })
+    return response.data.data!
+  },
+
+  get: async (id: string): Promise<Expense> => {
+    const response = await api.get<ApiResponse<Expense>>(`/expenses/${id}`)
+    return response.data.data!
+  },
+
+  create: async (data: CreateExpenseRequest): Promise<Expense> => {
+    const response = await api.post<ApiResponse<Expense>>('/expenses', data)
+    return response.data.data!
+  },
+}
+
+// Admin
+export const adminApi = {
+  getStats: async (): Promise<AdminStats> => {
+    const response = await api.get<ApiResponse<AdminStats>>('/admin/stats')
+    return response.data.data!
+  },
+
+  updateExpenseStatus: async (
+    id: string,
+    data: UpdateExpenseStatusRequest
+  ): Promise<Expense> => {
+    const response = await api.patch<ApiResponse<Expense>>(
+      `/admin/expenses/${id}/status`,
+      data
+    )
+    return response.data.data!
+  },
+
+  getAuditLog: async (expenseId: string): Promise<AuditLogEntry[]> => {
+    const response = await api.get<ApiResponse<AuditLogEntry[]>>(
+      `/admin/expenses/${expenseId}/audit`
+    )
+    return response.data.data!
+  },
+}
+
+// Profile
+export const profileApi = {
+  me: async (): Promise<User> => {
+    const response = await api.get<ApiResponse<User>>('/profiles/me')
+    return response.data.data!
+  },
+
+  update: async (data: Partial<User>): Promise<User> => {
+    const response = await api.patch<ApiResponse<User>>('/profiles/me', data)
+    return response.data.data!
+  },
+}
+
+export default api
