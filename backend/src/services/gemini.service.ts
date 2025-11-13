@@ -255,32 +255,43 @@ You MUST extract these REQUIRED fields from the document:
 
 9. CRITICAL - tax_breakdown: Extract the COMPLETE IVA/VAT breakdown table AS AN ARRAY.
 
-   The VAT table typically has 3 columns showing Base Imponible, Percentage IVA, and Cuota.
-   Each ROW represents one tax band. For EACH ROW, extract ALL THREE values together.
+   STEP-BY-STEP PROCESS FOR READING THE VAT TABLE:
 
-   Example: If you see a table with these rows:
-   Row 1: Base of 12.75 euros at 21 percent with tax of 2.68 euros
-   Row 2: Base of 21.66 euros at 10 percent with tax of 2.17 euros
-   Row 3: Base of 5.14 euros at 5 percent with tax of 0.26 euros
-   Row 4: Base of 20.42 euros at 0 percent with tax of 0.00 euros
+   1. Find the VAT breakdown table (usually labeled "Desglose IVA", "IVA", or similar)
+   2. The table has columns like: Base Imponible | % IVA | Cuota
+   3. Read the table ROW BY ROW from top to bottom
+   4. For EACH ROW, you must keep the three values together:
+      - The percentage/rate from that row
+      - The base amount from that SAME row
+      - The tax amount from that SAME row
 
-   You must extract as this JSON array (converting euros to cents):
+   CRITICAL: All three values in each JSON object MUST come from the SAME table row!
+
+   Example table:
+   | Base Imponible | % IVA | Cuota   |
+   |---------------|-------|---------|
+   | 12,75 €       | 21%   | 2,68 €  |  <- Row 1
+   | 21,66 €       | 10%   | 2,17 €  |  <- Row 2
+   | 5,14 €        | 5%    | 0,26 €  |  <- Row 3
+   | 20,42 €       | 0%    | 0,00 €  |  <- Row 4
+
+   Correct extraction (each object uses values from ONE row):
    [
-     {"tax_rate": 21, "tax_base": 1275, "tax_amount": 268},
-     {"tax_rate": 10, "tax_base": 2166, "tax_amount": 217},
-     {"tax_rate": 5, "tax_base": 514, "tax_amount": 26},
-     {"tax_rate": 0, "tax_base": 2042, "tax_amount": 0}
+     {"tax_rate": 21, "tax_base": 1275, "tax_amount": 268},   <- All from Row 1
+     {"tax_rate": 10, "tax_base": 2166, "tax_amount": 217},   <- All from Row 2
+     {"tax_rate": 5, "tax_base": 514, "tax_amount": 26},      <- All from Row 3
+     {"tax_rate": 0, "tax_base": 2042, "tax_amount": 0}       <- All from Row 4
    ]
 
    CRITICAL RULES:
-   - Extract ALL rows from the VAT breakdown table
-   - Each object has 3 values from the SAME row
-   - tax_rate is the percentage column
-   - tax_base is the base amount column (multiply by 100 for cents)
-   - tax_amount is the tax/cuota column (multiply by 100 for cents)
+   - Read each table row LEFT to RIGHT
+   - Keep all values from the same row together in one JSON object
+   - tax_rate = the percentage column value (21, 10, 5, 0, etc.)
+   - tax_base = the base amount from THAT SAME ROW (in cents)
+   - tax_amount = the cuota from THAT SAME ROW (in cents)
    - Do NOT mix values from different rows
-   - Do NOT skip rows including 0 percent rates
-   - Do NOT include the totals row
+   - Do NOT skip any rows, including 0% exempt rates
+   - Do NOT include the totals/summary row
 
 10. line_items: Array of products/services with:
    - description (text)
