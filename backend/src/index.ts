@@ -7,6 +7,12 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { env } from './config/env.js';
 import { HTTP_STATUS } from './config/constants.js';
+import authRoutes from './routes/auth.routes.js';
+import expensesRoutes from './routes/expenses.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import profilesRoutes from './routes/profiles.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
+import healthRoutes from './routes/health.routes.js';
 import ocrRoutes from './routes/ocr.routes.js';
 
 const app: Express = express();
@@ -55,6 +61,12 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/expenses', expensesRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/profiles', profilesRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/health', healthRoutes);
 app.use('/api/ocr', ocrRoutes);
 
 // 404 Handler
@@ -89,11 +101,14 @@ app.listen(PORT, () => {
 ║   Port:        ${PORT.toString().padEnd(28)} ║
 ║   OCR Model:   ${env.GEMINI_MODEL.padEnd(28)} ║
 ║                                           ║
-║   Endpoints:                              ║
-║   - POST /api/ocr/extract/invoice         ║
-║   - POST /api/ocr/extract/receipt         ║
-║   - GET  /api/ocr/health                  ║
-║   - GET  /health                          ║
+║   API Endpoints:                          ║
+║   - /api/auth     (Authentication)        ║
+║   - /api/expenses (Expenses CRUD)         ║
+║   - /api/admin    (Admin operations)      ║
+║   - /api/profiles (User profiles)         ║
+║   - /api/settings (Events & Categories)   ║
+║   - /api/ocr      (OCR extraction)        ║
+║   - /health       (Health check)          ║
 ║                                           ║
 ║   Server running at http://localhost:${PORT}  ║
 ╚═══════════════════════════════════════════╝

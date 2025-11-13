@@ -99,3 +99,8 @@ export const env = {
  * Type-safe environment variable access
  */
 export type Env = typeof env;
+
+/**
+ * Helper to check if running in development mode
+ */
+export const isDevelopment = env.NODE_ENV === 'development';

@@ -10,9 +10,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, Upload } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { EXPENSE_TYPE_LABELS } from '@/lib/constants'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { OCRUpload } from '@/components/features/expenses/OCRUpload'
+import type { OCRExtractResponse } from '@/types/api.types'
+import { useToast } from '@/hooks/useToast'
 
 const expenseSchema = z.object({
   name: z.string().min(2, 'El nom és obligatori'),
@@ -36,9 +39,11 @@ type ExpenseFormData = z.infer<typeof expenseSchema>
 export default function NewExpensePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { toast } = useToast()
   const createExpense = useCreateExpense()
   const { data: activeEvents, isLoading: isLoadingEvents } = useActiveEvents()
   const { data: activeCategories, isLoading: isLoadingCategories } = useActiveCategories()
+  const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
 
   const {
     register,
@@ -98,13 +103,50 @@ export default function NewExpensePage() {
   const expenseType = watch('type')
   const needsBankAccount = expenseType === 'reimbursable'
 
+  const handleOCRSuccess = (response: OCRExtractResponse) => {
+    const { data: extractedData } = response
+
+    // Auto-fill form fields with extracted data
+    setValue('vendorName', extractedData.vendorName || '')
+    setValue('vendorNif', extractedData.vendorNif || '')
+    setValue('invoiceNumber', extractedData.invoiceNumber || '')
+    setValue('totalAmount', extractedData.totalAmount?.toString() || '')
+
+    // Format date from YYYY-MM-DD or other formats
+    if (extractedData.invoiceDate) {
+      try {
+        const date = new Date(extractedData.invoiceDate)
+        const formattedDate = date.toISOString().split('T')[0]
+        setValue('invoiceDate', formattedDate)
+      } catch {
+        setValue('invoiceDate', extractedData.invoiceDate)
+      }
+    }
+
+    // Store OCR metadata
+    const confidence = extractedData.confidence || 0
+    setOcrConfidence(confidence)
+
+    toast({
+      title: 'Dades extretes correctament',
+      description: `Temps: ${Math.round(response.duration)}ms. Revisa les dades abans d'enviar.`,
+    })
+  }
+
+  const handleOCRError = (error: Error) => {
+    toast({
+      title: 'Error al processar el document',
+      description: error.message,
+      variant: 'destructive',
+    })
+  }
+
   const onSubmit = async (data: ExpenseFormData) => {
     try {
       await createExpense.mutateAsync({
         ...data,
         type: data.type as 'reimbursable' | 'non_reimbursable' | 'payable',
-        fileUrl: 'https://placeholder.com/receipt.pdf', // Placeholder for now
-        fileName: 'receipt.pdf',
+        ocrConfidence: ocrConfidence || undefined,
       })
       navigate('/dashboard')
     } catch (error) {
@@ -262,15 +304,10 @@ export default function NewExpensePage() {
               </div>
             </div>
 
-            {/* File Upload Placeholder */}
+            {/* OCR Upload */}
             <div className="space-y-2">
-              <Label>Factura o rebut</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">
-                  Puja la factura o rebut (pròximament)
-                </p>
-              </div>
+              <Label>Factura o rebut *</Label>
+              <OCRUpload onExtractSuccess={handleOCRSuccess} onExtractError={handleOCRError} />
             </div>
           </CardContent>
         </Card>

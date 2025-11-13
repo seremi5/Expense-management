@@ -50,6 +50,26 @@ export const statusEnum = pgEnum('status', [
   'flagged'
 ]);
 
+// Events Table
+export const events = pgTable('events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').unique().notNull(),
+  label: text('label').notNull(),
+  isActive: text('is_active').notNull().default('true'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Categories Table
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').unique().notNull(),
+  label: text('label').notNull(),
+  isActive: text('is_active').notNull().default('true'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Profiles Table
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().defaultRandom(),

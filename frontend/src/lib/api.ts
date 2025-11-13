@@ -14,6 +14,13 @@ import type {
   AdminStats,
   AuditLogEntry,
   UpdateProfileRequest,
+  OCRExtractResponse,
+  Event,
+  Category,
+  CreateEventRequest,
+  CreateCategoryRequest,
+  UpdateEventRequest,
+  UpdateCategoryRequest,
 } from '@/types/api.types'
 
 const api = axios.create({
@@ -133,6 +140,78 @@ export const profileApi = {
   update: async (data: Partial<User>): Promise<User> => {
     const response = await api.patch<ApiResponse<User>>('/profiles/me', data)
     return response.data.data!
+  },
+}
+
+// OCR
+export const ocrApi = {
+  extract: async (file: File): Promise<OCRExtractResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await api.post<ApiResponse<OCRExtractResponse>>(
+      '/ocr/extract',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    )
+    return response.data.data!
+  },
+}
+
+// Settings
+export const settingsApi = {
+  // Events
+  getEvents: async (): Promise<Event[]> => {
+    const response = await api.get<ApiResponse<Event[]>>('/settings/events')
+    return response.data.data!
+  },
+
+  getActiveEvents: async (): Promise<Event[]> => {
+    const response = await api.get<ApiResponse<Event[]>>('/settings/events/active')
+    return response.data.data!
+  },
+
+  createEvent: async (data: CreateEventRequest): Promise<Event> => {
+    const response = await api.post<ApiResponse<Event>>('/settings/events', data)
+    return response.data.data!
+  },
+
+  updateEvent: async (id: string, data: UpdateEventRequest): Promise<Event> => {
+    const response = await api.patch<ApiResponse<Event>>(`/settings/events/${id}`, data)
+    return response.data.data!
+  },
+
+  deleteEvent: async (id: string): Promise<void> => {
+    await api.delete(`/settings/events/${id}`)
+  },
+
+  // Categories
+  getCategories: async (): Promise<Category[]> => {
+    const response = await api.get<ApiResponse<Category[]>>('/settings/categories')
+    return response.data.data!
+  },
+
+  getActiveCategories: async (): Promise<Category[]> => {
+    const response = await api.get<ApiResponse<Category[]>>('/settings/categories/active')
+    return response.data.data!
+  },
+
+  createCategory: async (data: CreateCategoryRequest): Promise<Category> => {
+    const response = await api.post<ApiResponse<Category>>('/settings/categories', data)
+    return response.data.data!
+  },
+
+  updateCategory: async (id: string, data: UpdateCategoryRequest): Promise<Category> => {
+    const response = await api.patch<ApiResponse<Category>>(`/settings/categories/${id}`, data)
+    return response.data.data!
+  },
+
+  deleteCategory: async (id: string): Promise<void> => {
+    await api.delete(`/settings/categories/${id}`)
   },
 }
 

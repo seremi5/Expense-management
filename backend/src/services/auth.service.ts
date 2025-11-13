@@ -52,12 +52,12 @@ export function generateToken(user: Profile): string {
   }
 
   const options: SignOptions = {
-    expiresIn: env.jwt.expiresIn as any,
+    expiresIn: env.JWT_EXPIRES_IN,
     issuer: 'expense-management-api',
     audience: 'expense-management-client',
   }
 
-  return jwt.sign(payload, env.jwt.secret, options)
+  return jwt.sign(payload, env.JWT_SECRET, options)
 }
 
 /**
@@ -66,7 +66,7 @@ export function generateToken(user: Profile): string {
  */
 export function verifyToken(token: string): JWTPayload {
   try {
-    const decoded = jwt.verify(token, env.jwt.secret, {
+    const decoded = jwt.verify(token, env.JWT_SECRET, {
       issuer: 'expense-management-api',
       audience: 'expense-management-client',
     }) as JWTPayload

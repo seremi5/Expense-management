@@ -216,3 +216,50 @@ export interface UpdateCategoryRequest {
   label?: string
   isActive?: string
 }
+
+export interface OCRExtractRequest {
+  file: File
+}
+
+export interface OCRLineItem {
+  description: string
+  quantity: number
+  unitPrice: number
+  vatRate: number
+  subtotal: number
+  vatAmount: number
+  total: number
+}
+
+export interface OCRExtractedData {
+  vendorName: string
+  vendorNif?: string
+  invoiceNumber: string
+  invoiceDate: string
+  totalAmount: number
+  taxBase?: number
+  vat21Base?: number
+  vat21Amount?: number
+  vat10Base?: number
+  vat10Amount?: number
+  vat4Base?: number
+  vat4Amount?: number
+  vat0Base?: number
+  vat0Amount?: number
+  lineItems?: OCRLineItem[]
+  confidence?: number
+}
+
+export interface OCRExtractResponse {
+  data: OCRExtractedData
+  errors?: string[]
+  warnings?: string[]
+  duration: number
+  metadata?: {
+    fileSize: number
+    mimeType: string
+    width?: number
+    height?: number
+    pageCount?: number
+  }
+}
