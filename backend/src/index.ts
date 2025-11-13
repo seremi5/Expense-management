@@ -7,6 +7,7 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mkdirSync, existsSync } from 'fs';
 import { env } from './config/env.js';
 import { HTTP_STATUS } from './config/constants.js';
 import authRoutes from './routes/auth.routes.js';
@@ -20,6 +21,15 @@ import ocrRoutes from './routes/ocr.routes.js';
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!existsSync(uploadsDir)) {
+  mkdirSync(uploadsDir, { recursive: true });
+  console.log(`✅ Created uploads directory: ${uploadsDir}`);
+} else {
+  console.log(`✓ Uploads directory exists: ${uploadsDir}`);
+}
 
 const app: Express = express();
 
