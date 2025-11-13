@@ -44,25 +44,35 @@ function mapVATBreakdown(taxBreakdown: Array<{ tax_rate: number; tax_base: numbe
     // For 0% rate, amount must always be 0
     const amount = rate === 0 ? 0 : (band.tax_amount ? band.tax_amount / 100 : undefined);
 
+    console.log(`[VAT Mapping] Processing band: rate=${rate}, base=${base}, amount=${amount}`);
+
     // Match rate to field (with tolerance for 4% vs 5%)
     if (rate >= 20 && rate <= 22) {
       // 21% VAT
+      console.log(`[VAT Mapping] ✓ Matched 21% VAT rate - setting vat21Base=${base}, vat21Amount=${amount}`);
       result.vat21Base = base;
       result.vat21Amount = amount;
     } else if (rate >= 9 && rate <= 11) {
       // 10% VAT
+      console.log(`[VAT Mapping] ✓ Matched 10% VAT rate - setting vat10Base=${base}, vat10Amount=${amount}`);
       result.vat10Base = base;
       result.vat10Amount = amount;
     } else if (rate >= 4 && rate <= 5) {
       // 4% or 5% VAT (reduced rate)
+      console.log(`[VAT Mapping] ✓ Matched 4%/5% VAT rate - setting vat4Base=${base}, vat4Amount=${amount}`);
       result.vat4Base = base;
       result.vat4Amount = amount;
     } else if (rate === 0) {
       // 0% VAT (exempt) - amount must be 0
+      console.log(`[VAT Mapping] ✓ Matched 0% VAT rate - setting vat0Base=${base}, vat0Amount=0`);
       result.vat0Base = base;
       result.vat0Amount = 0;
+    } else {
+      console.log(`[VAT Mapping] ⚠️  No match for rate ${rate} - skipping`);
     }
   }
+
+  console.log('[VAT Mapping] Final result:', result);
 
   return result;
 }
