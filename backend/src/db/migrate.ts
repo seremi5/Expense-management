@@ -1,6 +1,6 @@
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import { db, queryClient, testConnection } from './index.js'
-import { validateEnv } from '../config/env.js'
+import { migrateDb, closeDatabase } from './index.js'
+import { env } from '../config/env.js'
 
 /**
  * Run database migrations
@@ -9,28 +9,20 @@ import { validateEnv } from '../config/env.js'
 async function runMigrations() {
   try {
     console.log('[Migration] Starting database migration...')
-
-    // Validate environment variables
-    validateEnv()
-
-    // Test database connection
-    const isConnected = await testConnection()
-    if (!isConnected) {
-      throw new Error('Database connection failed')
-    }
+    console.log('[Migration] Database URL configured:', env.DATABASE_URL ? 'Yes' : 'No')
 
     // Run migrations from the drizzle folder
-    await migrate(db, { migrationsFolder: './drizzle' })
+    await migrate(migrateDb, { migrationsFolder: './drizzle' })
 
     console.log('[Migration] Database migration completed successfully')
 
     // Close connection
-    await queryClient.end()
+    await closeDatabase()
 
     process.exit(0)
   } catch (error) {
     console.error('[Migration] Migration failed:', error)
-    await queryClient.end()
+    await closeDatabase()
     process.exit(1)
   }
 }
