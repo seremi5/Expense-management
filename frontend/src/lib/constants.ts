@@ -1,5 +1,14 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
+/**
+ * Get file URL - returns the URL as-is
+ * In development: Vite proxy routes /uploads to backend (localhost:3000)
+ * In production: Reverse proxy (nginx) routes /uploads to backend
+ */
+export function getFileUrl(fileUrl: string | null | undefined): string | null {
+  return fileUrl || null
+}
+
 export const EXPENSE_STATUS = {
   SUBMITTED: 'submitted',
   READY_TO_PAY: 'ready_to_pay',

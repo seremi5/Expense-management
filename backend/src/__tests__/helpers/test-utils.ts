@@ -3,6 +3,7 @@
  * Provides common functionality for tests
  */
 
+import { jest } from '@jest/globals'
 import jwt from 'jsonwebtoken'
 import type { JWTPayload } from '../../types/index.js'
 import type { Profile } from '../../db/schema.js'
@@ -64,6 +65,10 @@ export function createMockProfile(overrides?: Partial<Profile>): Profile {
     passwordHash: '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyB0gQPdvSSq', // "password"
     name: 'Test User',
     role: 'viewer',
+    phone: null,
+    bankAccount: null,
+    bankName: null,
+    accountHolder: null,
     createdAt: new Date(),
     lastLogin: null,
     ...overrides,

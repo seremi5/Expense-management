@@ -291,10 +291,6 @@ export class OCRService {
       errors.push(`Invalid invoice date format: ${invoice.invoice_date}`);
     }
 
-    if (invoice.due_date && !this.isValidDate(invoice.due_date)) {
-      errors.push(`Invalid due date format: ${invoice.due_date}`);
-    }
-
     return { errors, warnings };
   }
 
@@ -378,10 +374,6 @@ export class OCRService {
     // Validate date format
     if (doc.date && !this.isValidDateISO8601(doc.date)) {
       errors.push(`Invalid date format: ${doc.date}`);
-    }
-
-    if (doc.due_date && !this.isValidDate(doc.due_date)) {
-      errors.push(`Invalid due date format: ${doc.due_date}`);
     }
 
     return { errors, warnings };

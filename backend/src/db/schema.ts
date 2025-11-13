@@ -77,6 +77,10 @@ export const profiles = pgTable('profiles', {
   passwordHash: text('password_hash').notNull(),
   name: text('name').notNull(),
   role: roleEnum('role').notNull().default('viewer'),
+  phone: text('phone'),
+  bankAccount: text('bank_account'),
+  bankName: text('bank_name'),
+  accountHolder: text('account_holder'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   lastLogin: timestamp('last_login', { withTimezone: true })
 }, (table) => ({
@@ -86,7 +90,7 @@ export const profiles = pgTable('profiles', {
 // Expenses Table
 export const expenses = pgTable('expenses', {
   id: uuid('id').primaryKey().defaultRandom(),
-  referenceNumber: text('reference_number').unique().notNull(),
+  referenceNumber: text('reference_number').notNull(),
 
   // Submitter Information
   email: text('email').notNull(),
@@ -124,9 +128,9 @@ export const expenses = pgTable('expenses', {
   bankAccount: text('bank_account'),
   accountHolder: text('account_holder'),
 
-  // File Information
-  fileUrl: text('file_url').notNull(),
-  fileName: text('file_name').notNull(),
+  // File Information (optional - can be uploaded later)
+  fileUrl: text('file_url'),
+  fileName: text('file_name'),
 
   // Status and Approval
   status: statusEnum('status').notNull().default('submitted'),
@@ -148,7 +152,7 @@ export const expenses = pgTable('expenses', {
   categoryIdx: index('category_idx').on(table.category),
   emailIdx: index('submitter_email_idx').on(table.email),
   createdAtIdx: index('created_at_idx').on(table.createdAt),
-  referenceNumberIdx: uniqueIndex('reference_number_idx').on(table.referenceNumber)
+  referenceNumberIdx: index('reference_number_idx').on(table.referenceNumber)
 }));
 
 // Expense Line Items Table

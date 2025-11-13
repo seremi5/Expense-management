@@ -3,31 +3,72 @@
  * Tests complete auth flow with mocked database
  */
 
-import request from 'supertest'
-import { createApp } from '../../app.js'
-import * as dbService from '../../services/database.service.js'
-import * as authService from '../../services/auth.service.js'
-import { createMockProfile } from '../helpers/test-utils.js'
+import { jest, beforeEach, afterEach, describe, it, expect } from '@jest/globals'
 
-// Mock the database service
-jest.mock('../../services/database.service.js')
-// Mock the logger to prevent console noise
-jest.mock('../../services/logger.service.js')
+// Mock the services BEFORE importing anything else
+jest.unstable_mockModule('../../services/database.service.js', () => ({
+  createProfile: jest.fn(),
+  findProfileByEmail: jest.fn(),
+  findProfileById: jest.fn(),
+  updateProfile: jest.fn(),
+  updateLastLogin: jest.fn(),
+  getAllProfiles: jest.fn(),
+  createExpense: jest.fn(),
+  findExpenseById: jest.fn(),
+  findExpenseByReferenceNumber: jest.fn(),
+  findExpenses: jest.fn(),
+  updateExpense: jest.fn(),
+  deleteExpense: jest.fn(),
+  createLineItems: jest.fn(),
+  deleteLineItemsByExpenseId: jest.fn(),
+  createAuditLog: jest.fn(),
+  getAuditLogsByExpenseId: jest.fn(),
+  getRecentAuditLogs: jest.fn(),
+  getExpenseStats: jest.fn(),
+  generateReferenceNumber: jest.fn(),
+}))
 
-const mockDbService = dbService as jest.Mocked<typeof dbService>
+jest.unstable_mockModule('../../services/logger.service.js', () => ({
+  logInfo: jest.fn(),
+  logError: jest.fn(),
+  logWarn: jest.fn(),
+  logDebug: jest.fn(),
+  logRequest: jest.fn(),
+  logResponse: jest.fn(),
+  logEvent: jest.fn(),
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}))
+
+// Now import everything
+const { createApp } = await import('../../app.js')
+const authService = await import('../../services/auth.service.js')
+const { createMockProfile } = await import('../helpers/test-utils.js')
+const request = (await import('supertest')).default
+
+// Import the mocked dbService - this should be the same instance used by the routes
+const dbService = await import('../../services/database.service.js')
 
 describe('Authentication Routes', () => {
-  const app = createApp()
+  let app: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks()
+
+    // Recreate app to get fresh route instances
+    app = createApp()
   })
 
   describe('POST /api/auth/register', () => {
     it('should register new user successfully', async () => {
       const mockUser = createMockProfile()
-      mockDbService.findProfileByEmail.mockResolvedValue(undefined)
-      mockDbService.createProfile.mockResolvedValue(mockUser)
+
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(undefined)
+      ;(dbService.createProfile as any).mockResolvedValue(mockUser)
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -36,7 +77,13 @@ describe('Authentication Routes', () => {
           password: 'StrongPass123',
           name: 'New User',
         })
-        .expect(201)
+
+      if (response.status !== 201) {
+        console.error('Register error:', JSON.stringify(response.body, null, 2))
+        console.error('createProfile was called:', (dbService.createProfile as any).mock.calls.length, 'times')
+      }
+
+      expect(response.status).toBe(201)
 
       expect(response.body.success).toBe(true)
       expect(response.body.data).toHaveProperty('token')
@@ -44,13 +91,13 @@ describe('Authentication Routes', () => {
       expect(response.body.data.user.email).toBe(mockUser.email)
       expect(response.body.message).toBe('Registration successful')
 
-      expect(mockDbService.findProfileByEmail).toHaveBeenCalledWith('newuser@example.com')
-      expect(mockDbService.createProfile).toHaveBeenCalled()
+      expect(dbService.findProfileByEmail).toHaveBeenCalledWith('newuser@example.com')
+      expect(dbService.createProfile).toHaveBeenCalled()
     })
 
     it('should reject registration with existing email', async () => {
       const existingUser = createMockProfile()
-      mockDbService.findProfileByEmail.mockResolvedValue(existingUser)
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(existingUser)
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -66,7 +113,7 @@ describe('Authentication Routes', () => {
     })
 
     it('should reject registration with weak password', async () => {
-      mockDbService.findProfileByEmail.mockResolvedValue(undefined)
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(undefined)
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -106,7 +153,7 @@ describe('Authentication Routes', () => {
     })
 
     it('should reject registration with short name', async () => {
-      mockDbService.findProfileByEmail.mockResolvedValue(undefined)
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(undefined)
 
       const response = await request(app)
         .post('/api/auth/register')
@@ -127,8 +174,8 @@ describe('Authentication Routes', () => {
       const hashedPassword = await authService.hashPassword('TestPassword123')
       mockUser.passwordHash = hashedPassword
 
-      mockDbService.findProfileByEmail.mockResolvedValue(mockUser)
-      mockDbService.updateLastLogin.mockResolvedValue(undefined)
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(mockUser)
+      ;(dbService.updateLastLogin as any).mockResolvedValue(undefined)
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -141,11 +188,11 @@ describe('Authentication Routes', () => {
       expect(response.body.success).toBe(true)
       expect(response.body.data).toHaveProperty('token')
       expect(response.body.data.user.email).toBe(mockUser.email)
-      expect(mockDbService.updateLastLogin).toHaveBeenCalledWith(mockUser.id)
+      expect(dbService.updateLastLogin).toHaveBeenCalledWith(mockUser.id)
     })
 
     it('should reject login with non-existent email', async () => {
-      mockDbService.findProfileByEmail.mockResolvedValue(undefined)
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(undefined)
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -164,7 +211,7 @@ describe('Authentication Routes', () => {
       const hashedPassword = await authService.hashPassword('CorrectPassword123')
       mockUser.passwordHash = hashedPassword
 
-      mockDbService.findProfileByEmail.mockResolvedValue(mockUser)
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(mockUser)
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -194,8 +241,8 @@ describe('Authentication Routes', () => {
       const hashedPassword = await authService.hashPassword('TestPassword123')
       mockUser.passwordHash = hashedPassword
 
-      mockDbService.findProfileByEmail.mockResolvedValue(mockUser)
-      mockDbService.updateLastLogin.mockResolvedValue(undefined)
+      ;(dbService.findProfileByEmail as any).mockResolvedValue(mockUser)
+      ;(dbService.updateLastLogin as any).mockResolvedValue(undefined)
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -206,7 +253,7 @@ describe('Authentication Routes', () => {
         .expect(200)
 
       expect(response.body.success).toBe(true)
-      expect(mockDbService.findProfileByEmail).toHaveBeenCalledWith('user@example.com')
+      expect(dbService.findProfileByEmail).toHaveBeenCalledWith('user@example.com')
     })
   })
 
@@ -215,13 +262,18 @@ describe('Authentication Routes', () => {
       const mockUser = createMockProfile()
       const token = authService.generateToken(mockUser)
 
-      mockDbService.findProfileById.mockResolvedValue(mockUser)
+      // Mock findProfileById to return the user
+      ;(dbService.findProfileById as any).mockResolvedValue(mockUser)
 
       const response = await request(app)
         .get('/api/auth/me')
         .set('Authorization', `Bearer ${token}`)
-        .expect(200)
 
+      if (response.status !== 200) {
+        console.log('Error response:', response.status, response.body)
+      }
+
+      expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
       expect(response.body.data.id).toBe(mockUser.id)
       expect(response.body.data.email).toBe(mockUser.email)
@@ -265,8 +317,8 @@ describe('Authentication Routes', () => {
 
       const token = authService.generateToken(mockUser)
 
-      mockDbService.findProfileById.mockResolvedValue(mockUser)
-      mockDbService.updateProfile.mockResolvedValue(undefined)
+      ;(dbService.findProfileById as any).mockResolvedValue(mockUser)
+      ;(dbService.updateProfile as any).mockResolvedValue(undefined)
 
       const response = await request(app)
         .post('/api/auth/change-password')
@@ -279,7 +331,7 @@ describe('Authentication Routes', () => {
 
       expect(response.body.success).toBe(true)
       expect(response.body.message).toBe('Password changed successfully')
-      expect(mockDbService.updateProfile).toHaveBeenCalled()
+      expect(dbService.updateProfile).toHaveBeenCalled()
     })
 
     it('should reject password change with incorrect current password', async () => {
@@ -289,7 +341,7 @@ describe('Authentication Routes', () => {
 
       const token = authService.generateToken(mockUser)
 
-      mockDbService.findProfileById.mockResolvedValue(mockUser)
+      ;(dbService.findProfileById as any).mockResolvedValue(mockUser)
 
       const response = await request(app)
         .post('/api/auth/change-password')
@@ -311,7 +363,7 @@ describe('Authentication Routes', () => {
 
       const token = authService.generateToken(mockUser)
 
-      mockDbService.findProfileById.mockResolvedValue(mockUser)
+      ;(dbService.findProfileById as any).mockResolvedValue(mockUser)
 
       const response = await request(app)
         .post('/api/auth/change-password')

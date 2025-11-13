@@ -65,7 +65,7 @@ export function createApp(): Express {
         if (!origin) return callback(null, true)
 
         const allowedOrigins = [
-          env.app.frontendUrl,
+          env.FRONTEND_URL,
           'http://localhost:5173',
           'http://localhost:5174',
           'http://localhost:5175',
@@ -156,7 +156,7 @@ export function createApp(): Express {
       name: 'Expense Reimbursement API',
       version: '1.0.0',
       status: 'running',
-      environment: env.app.nodeEnv,
+      environment: env.NODE_ENV,
       endpoints: {
         health: '/api/health',
         auth: '/api/auth',

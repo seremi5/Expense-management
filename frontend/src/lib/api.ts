@@ -37,6 +37,12 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // If sending FormData, let axios set Content-Type with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+
     return config
   },
   (error) => {
@@ -149,12 +155,13 @@ export const ocrApi = {
     const formData = new FormData()
     formData.append('file', file)
 
-    // Note: Don't set Content-Type manually - axios will set it with the correct boundary
-    const response = await api.post<ApiResponse<OCRExtractResponse>>(
+    // The request interceptor will handle removing Content-Type for FormData
+    const response = await api.post<OCRExtractResponse>(
       '/ocr/extract',
       formData
     )
-    return response.data.data!
+    // Return the full response including data, warnings, errors, duration, metadata
+    return response.data
   },
 }
 

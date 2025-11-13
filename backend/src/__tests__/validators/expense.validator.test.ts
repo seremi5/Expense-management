@@ -18,11 +18,11 @@ describe('Expense Validators', () => {
         phone: '+34123456789',
         name: 'John',
         surname: 'Doe',
-        event: 'mwc_barcelona' as const,
-        category: 'accommodation' as const,
+        event: 'general' as const,
+        category: 'menjar' as const,
         type: 'reimbursable' as const,
         invoiceNumber: 'INV-001',
-        invoiceDate: '2025-01-10T10:00:00Z',
+        invoiceDate: '2025-01-10',
         vendorName: 'Hotel Test',
         vendorNif: 'B12345678',
         totalAmount: '150.00',
@@ -36,6 +36,9 @@ describe('Expense Validators', () => {
 
     it('should validate correct expense data', () => {
       const result = createExpenseSchema.safeParse(validExpenseData)
+      if (!result.success) {
+        console.log('Validation errors:', JSON.stringify(result.error.issues, null, 2))
+      }
       expect(result.success).toBe(true)
     })
 
@@ -163,13 +166,13 @@ describe('Expense Validators', () => {
       const result = createExpenseSchema.safeParse(invalidData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        const errors = result.error.errors.map(e => e.message)
-        expect(errors.some(e => e.includes('Bank account'))).toBe(true)
+        const errors = result.error.issues.map((issue: any) => issue.message)
+        expect(errors.some((e: string) => e.includes('compte bancari') || e.includes('Bank account'))).toBe(true)
       }
     })
 
-    it('should require bank account for payable expenses', () => {
-      const invalidData = {
+    it('should not require bank account for payable expenses', () => {
+      const data = {
         ...validExpenseData,
         body: {
           ...validExpenseData.body,
@@ -179,8 +182,8 @@ describe('Expense Validators', () => {
         },
       }
 
-      const result = createExpenseSchema.safeParse(invalidData)
-      expect(result.success).toBe(false)
+      const result = createExpenseSchema.safeParse(data)
+      expect(result.success).toBe(true)
     })
 
     it('should not require bank account for non-reimbursable expenses', () => {
@@ -218,20 +221,20 @@ describe('Expense Validators', () => {
       expect(result.success).toBe(true)
     })
 
-    it('should reject invalid file URL', () => {
-      const invalidData = {
+    it('should accept file URL as any string', () => {
+      const data = {
         ...validExpenseData,
         body: { ...validExpenseData.body, fileUrl: 'not-a-url' },
       }
 
-      const result = createExpenseSchema.safeParse(invalidData)
-      expect(result.success).toBe(false)
+      const result = createExpenseSchema.safeParse(data)
+      expect(result.success).toBe(true)
     })
 
     it('should reject invalid invoice date format', () => {
       const invalidData = {
         ...validExpenseData,
-        body: { ...validExpenseData.body, invoiceDate: '2025-01-10' }, // Not ISO 8601 datetime
+        body: { ...validExpenseData.body, invoiceDate: '2025-01-10T10:00:00Z' }, // ISO 8601 datetime (invalid, should be YYYY-MM-DD)
       }
 
       const result = createExpenseSchema.safeParse(invalidData)
@@ -383,8 +386,8 @@ describe('Expense Validators', () => {
       const data = {
         query: {
           status: 'submitted',
-          event: 'mwc_barcelona',
-          category: 'accommodation',
+          event: 'general',
+          category: 'menjar',
           type: 'reimbursable',
           search: 'hotel',
         },

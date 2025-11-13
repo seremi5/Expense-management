@@ -26,12 +26,25 @@ const expenseSchema = z.object({
   category: z.string().min(1, 'Selecciona una categoria'),
   type: z.string().min(1, 'Selecciona un tipus'),
   vendorName: z.string().min(2, 'El nom del proveïdor és obligatori'),
-  vendorNif: z.string().optional(),
+  vendorNif: z.string().min(9, 'El NIF és obligatori (mínim 9 caràcters)').regex(/^[A-Z0-9]+$/, 'El NIF només pot contenir lletres majúscules i números'),
   invoiceNumber: z.string().min(1, 'El número de factura és obligatori'),
   invoiceDate: z.string().min(1, 'La data és obligatòria'),
   totalAmount: z.string().min(1, 'L\'import és obligatori'),
   bankAccount: z.string().optional(),
   accountHolder: z.string().optional(),
+  // Tax fields (optional, from OCR)
+  taxBase: z.string().optional(),
+  vat21Base: z.string().optional(),
+  vat21Amount: z.string().optional(),
+  vat10Base: z.string().optional(),
+  vat10Amount: z.string().optional(),
+  vat4Base: z.string().optional(),
+  vat4Amount: z.string().optional(),
+  vat0Base: z.string().optional(),
+  vat0Amount: z.string().optional(),
+  // File fields (optional, from OCR upload)
+  fileUrl: z.string().optional(),
+  fileName: z.string().optional(),
 })
 
 type ExpenseFormData = z.infer<typeof expenseSchema>
@@ -104,9 +117,18 @@ export default function NewExpensePage() {
   const needsBankAccount = expenseType === 'reimbursable'
 
   const handleOCRSuccess = (response: OCRExtractResponse) => {
+    console.log('OCR Response received:', response)
     const { data: extractedData } = response
 
-    // Auto-fill form fields with extracted data
+    // Check if extractedData exists
+    if (!extractedData) {
+      console.error('No data in OCR response')
+      return
+    }
+
+    console.log('Extracted data:', extractedData)
+
+    // Auto-fill basic form fields
     setValue('vendorName', extractedData.vendorName || '')
     setValue('vendorNif', extractedData.vendorNif || '')
     setValue('invoiceNumber', extractedData.invoiceNumber || '')
@@ -123,9 +145,26 @@ export default function NewExpensePage() {
       }
     }
 
+    // Auto-fill tax fields (IVA details)
+    if (extractedData.taxBase) setValue('taxBase', extractedData.taxBase.toString())
+    if (extractedData.vat21Base) setValue('vat21Base', extractedData.vat21Base.toString())
+    if (extractedData.vat21Amount) setValue('vat21Amount', extractedData.vat21Amount.toString())
+    if (extractedData.vat10Base) setValue('vat10Base', extractedData.vat10Base.toString())
+    if (extractedData.vat10Amount) setValue('vat10Amount', extractedData.vat10Amount.toString())
+    if (extractedData.vat4Base) setValue('vat4Base', extractedData.vat4Base.toString())
+    if (extractedData.vat4Amount) setValue('vat4Amount', extractedData.vat4Amount.toString())
+    if (extractedData.vat0Base) setValue('vat0Base', extractedData.vat0Base.toString())
+    if (extractedData.vat0Amount) setValue('vat0Amount', extractedData.vat0Amount.toString())
+
+    // Save file URL and filename
+    if (extractedData.fileUrl) setValue('fileUrl', extractedData.fileUrl)
+    if (extractedData.fileName) setValue('fileName', extractedData.fileName)
+
     // Store OCR metadata
     const confidence = extractedData.confidence || 0
     setOcrConfidence(confidence)
+
+    console.log('Form fields populated successfully with tax data and file info')
 
     toast({
       title: 'Dades extretes correctament',
@@ -279,8 +318,9 @@ export default function NewExpensePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vendorNif">NIF del proveïdor</Label>
+                <Label htmlFor="vendorNif">NIF del proveïdor *</Label>
                 <Input id="vendorNif" placeholder="B12345678" {...register('vendorNif')} />
+                {errors.vendorNif && <p className="text-sm text-red-600">{errors.vendorNif.message}</p>}
               </div>
             </div>
 

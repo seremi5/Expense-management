@@ -52,7 +52,7 @@ export function generateToken(user: Profile): string {
   }
 
   const options: SignOptions = {
-    expiresIn: env.JWT_EXPIRES_IN,
+    expiresIn: env.JWT_EXPIRES_IN as any,
     issuer: 'expense-management-api',
     audience: 'expense-management-client',
   }

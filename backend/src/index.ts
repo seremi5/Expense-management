@@ -5,6 +5,8 @@
 
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import { HTTP_STATUS } from './config/constants.js';
 import authRoutes from './routes/auth.routes.js';
@@ -14,6 +16,10 @@ import profilesRoutes from './routes/profiles.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import ocrRoutes from './routes/ocr.routes.js';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app: Express = express();
 
@@ -25,6 +31,11 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files statically
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
+console.log(`Serving static files from: ${uploadsPath}`);
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {

@@ -246,6 +246,8 @@ export interface OCRExtractedData {
   vat4Amount?: number
   vat0Base?: number
   vat0Amount?: number
+  fileUrl?: string
+  fileName?: string
   lineItems?: OCRLineItem[]
   confidence?: number
 }

@@ -128,8 +128,8 @@ router.post(
       expenseId: result.expense.id,
       userId: null,
       action: 'created',
-      oldValues: null,
-      newValues: { status: 'submitted' },
+      oldValue: null,
+      newValue: { status: 'submitted' },
     })
 
     logEvent('Expense created', {

@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo } from 'react'
-import { X, FileText, User, DollarSign, Check, XCircle, CreditCard, Edit2, Save } from 'lucide-react'
+import { X, FileText, User, DollarSign, Check, XCircle, CreditCard, Edit2, Save, Upload } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { StatusBadge } from '@/components/features/expenses/StatusBadge'
+import { OCRUpload } from '@/components/features/expenses/OCRUpload'
 import { useUpdateExpenseStatus, useUpdateExpense } from '@/hooks/useAdmin'
 import { useActiveEvents, useActiveCategories } from '@/hooks/useSettings'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { EXPENSE_TYPE_LABELS } from '@/lib/constants'
-import type { Expense } from '@/types/api.types'
+import { EXPENSE_TYPE_LABELS, getFileUrl } from '@/lib/constants'
+import { useToast } from '@/hooks/useToast'
+import type { Expense, OCRExtractResponse } from '@/types/api.types'
 
 interface ExpenseReviewModalProps {
   expense: Expense | null
@@ -22,13 +24,15 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
   const [declinedReason, setDeclinedReason] = useState('')
   const [action, setAction] = useState<'approve' | 'decline' | 'paid' | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [showUploadBox, setShowUploadBox] = useState(false)
   const updateStatus = useUpdateExpenseStatus()
   const updateExpense = useUpdateExpense()
+  const { toast } = useToast()
 
   const { data: activeEvents, isLoading: isLoadingEvents } = useActiveEvents()
   const { data: activeCategories, isLoading: isLoadingCategories } = useActiveCategories()
 
-  const { register, handleSubmit, reset, watch } = useForm<Partial<Expense>>({
+  const { register, handleSubmit, reset, watch, setValue } = useForm<Partial<Expense>>({
     defaultValues: expense || {},
   })
 
@@ -128,6 +132,8 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
         vat0Amount: data.vat0Amount,
         bankAccount: data.bankAccount,
         accountHolder: data.accountHolder,
+        fileUrl: data.fileUrl,
+        fileName: data.fileName,
       },
     })
     setIsEditing(false)
@@ -136,6 +142,66 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
   const handleCancelEdit = () => {
     reset(expense)
     setIsEditing(false)
+    setShowUploadBox(false)
+  }
+
+  const handleOCRSuccess = (response: OCRExtractResponse) => {
+    console.log('OCR Response received in admin modal:', response)
+    const { data: extractedData } = response
+
+    if (!extractedData) {
+      console.error('No data in OCR response')
+      return
+    }
+
+    console.log('Extracted data in admin modal:', extractedData)
+
+    // Auto-fill form fields with extracted data
+    if (extractedData.vendorName) setValue('vendorName', extractedData.vendorName)
+    if (extractedData.vendorNif) setValue('vendorNif', extractedData.vendorNif)
+    if (extractedData.invoiceNumber) setValue('invoiceNumber', extractedData.invoiceNumber)
+    if (extractedData.totalAmount) setValue('totalAmount', extractedData.totalAmount.toString())
+
+    // Format and set invoice date
+    if (extractedData.invoiceDate) {
+      try {
+        const date = new Date(extractedData.invoiceDate)
+        const formattedDate = date.toISOString().split('T')[0]
+        setValue('invoiceDate', formattedDate)
+      } catch {
+        setValue('invoiceDate', extractedData.invoiceDate)
+      }
+    }
+
+    // Auto-fill tax fields (IVA details)
+    if (extractedData.taxBase) setValue('taxBase', extractedData.taxBase.toString())
+    if (extractedData.vat21Base) setValue('vat21Base', extractedData.vat21Base.toString())
+    if (extractedData.vat21Amount) setValue('vat21Amount', extractedData.vat21Amount.toString())
+    if (extractedData.vat10Base) setValue('vat10Base', extractedData.vat10Base.toString())
+    if (extractedData.vat10Amount) setValue('vat10Amount', extractedData.vat10Amount.toString())
+    if (extractedData.vat4Base) setValue('vat4Base', extractedData.vat4Base.toString())
+    if (extractedData.vat4Amount) setValue('vat4Amount', extractedData.vat4Amount.toString())
+    if (extractedData.vat0Base) setValue('vat0Base', extractedData.vat0Base.toString())
+    if (extractedData.vat0Amount) setValue('vat0Amount', extractedData.vat0Amount.toString())
+
+    // Save file URL and filename
+    if (extractedData.fileUrl) setValue('fileUrl', extractedData.fileUrl)
+    if (extractedData.fileName) setValue('fileName', extractedData.fileName)
+
+    console.log('Form fields populated successfully in admin modal with file info')
+
+    toast({
+      title: 'Dades extretes correctament',
+      description: `Temps: ${Math.round(response.duration)}ms. Revisa les dades abans de desar.`,
+    })
+  }
+
+  const handleOCRError = (error: Error) => {
+    toast({
+      title: 'Error al processar el document',
+      description: error.message,
+      variant: 'destructive',
+    })
   }
 
   return (
@@ -367,6 +433,27 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
             expense.taxBase) && (
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               <div className="font-semibold text-gray-900">Detalls IVA</div>
+              {isEditing && (showUploadBox || !expense.fileUrl) && (
+                <div className="mb-3">
+                  <label className="text-sm text-gray-600 block mb-2">
+                    {expense.fileUrl && showUploadBox
+                      ? 'Puja una nova factura per extreure dades automàticament:'
+                      : 'Puja factura per extreure dades automàticament:'}
+                  </label>
+                  <OCRUpload onExtractSuccess={handleOCRSuccess} onExtractError={handleOCRError} />
+                  {expense.fileUrl && showUploadBox && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowUploadBox(false)}
+                      className="mt-2"
+                    >
+                      Cancel·lar
+                    </Button>
+                  )}
+                </div>
+              )}
               {isEditing ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
@@ -452,15 +539,17 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="space-y-3 text-sm">
                   {expense.taxBase && (
-                    <div>
-                      <span className="text-gray-600">Base imposable:</span>
-                      <p className="font-medium text-gray-900">{formatCurrency(expense.taxBase)}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-gray-600">Base imposable:</span>
+                        <p className="font-medium text-gray-900">{formatCurrency(expense.taxBase)}</p>
+                      </div>
                     </div>
                   )}
                   {expense.vat21Base && (
-                    <>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <span className="text-gray-600">Base IVA 21%:</span>
                         <p className="font-medium text-gray-900">
@@ -473,10 +562,10 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
                           {formatCurrency(expense.vat21Amount || '0')}
                         </p>
                       </div>
-                    </>
+                    </div>
                   )}
                   {expense.vat10Base && (
-                    <>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <span className="text-gray-600">Base IVA 10%:</span>
                         <p className="font-medium text-gray-900">
@@ -489,10 +578,10 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
                           {formatCurrency(expense.vat10Amount || '0')}
                         </p>
                       </div>
-                    </>
+                    </div>
                   )}
                   {expense.vat4Base && (
-                    <>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <span className="text-gray-600">Base IVA 4%:</span>
                         <p className="font-medium text-gray-900">
@@ -505,10 +594,10 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
                           {formatCurrency(expense.vat4Amount || '0')}
                         </p>
                       </div>
-                    </>
+                    </div>
                   )}
                   {expense.vat0Base && (
-                    <>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <span className="text-gray-600">Base IVA 0%:</span>
                         <p className="font-medium text-gray-900">
@@ -521,7 +610,7 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
                           {formatCurrency(expense.vat0Amount || '0')}
                         </p>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               )}
@@ -567,16 +656,30 @@ export function ExpenseReviewModal({ expense, isOpen, onClose }: ExpenseReviewMo
 
           {/* Invoice File */}
           {expense.fileUrl && (
-            <div className="border-t pt-4">
-              <a
-                href={expense.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
-              >
-                <FileText className="h-4 w-4" />
-                Veure factura ({expense.fileName || 'document.pdf'})
-              </a>
+            <div className="border-t pt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <a
+                  href={getFileUrl(expense.fileUrl) || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  <FileText className="h-4 w-4" />
+                  Veure factura ({expense.fileName || 'document.pdf'})
+                </a>
+                {isEditing && !showUploadBox && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowUploadBox(true)}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Substituir fitxer
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 

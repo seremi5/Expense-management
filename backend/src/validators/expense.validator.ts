@@ -68,7 +68,7 @@ export const createExpenseSchema = z.object({
       'trobada_adolescents',
       'equip_dele',
       'general',
-    ], { errorMap: () => ({ message: "Selecciona un esdeveniment vàlid" }) }),
+    ], { message: "Selecciona un esdeveniment vàlid" }),
     category: z.enum([
       'menjar',
       'transport',
@@ -82,8 +82,8 @@ export const createExpenseSchema = z.object({
       'material_musica',
       'reparacions',
       'mobiliari',
-    ], { errorMap: () => ({ message: "Selecciona una categoria vàlida" }) }),
-    type: z.enum(['reimbursable', 'non_reimbursable', 'payable'], { errorMap: () => ({ message: "Selecciona un tipus vàlid" }) }),
+    ], { message: "Selecciona una categoria vàlida" }),
+    type: z.enum(['reimbursable', 'non_reimbursable', 'payable'], { message: "Selecciona un tipus vàlid" }),
 
     // Invoice Details
     invoiceNumber: z.string().min(1, 'El número de factura és obligatori').max(100),
@@ -114,9 +114,9 @@ export const createExpenseSchema = z.object({
     bankAccount: z.string().optional(),
     accountHolder: z.string().optional(),
 
-    // File Information
-    fileUrl: z.string().url('URL del fitxer invàlida'),
-    fileName: z.string().min(1, 'El nom del fitxer és obligatori'),
+    // File Information (optional - file might be uploaded separately)
+    fileUrl: z.string().optional().or(z.literal('')),
+    fileName: z.string().optional().or(z.literal('')),
 
     // Additional Information
     comments: z.string().max(1000).optional(),
@@ -154,7 +154,7 @@ export const updateExpenseStatusSchema = z.object({
       'declined',
       'validated',
       'flagged',
-    ], { errorMap: () => ({ message: "Selecciona un estat vàlid" }) }),
+    ], { message: "Selecciona un estat vàlid" }),
     declinedReason: z.string().max(500).optional(),
     comments: z.string().max(1000).optional(),
   }),

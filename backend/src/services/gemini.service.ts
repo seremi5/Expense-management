@@ -129,7 +129,7 @@ export class GeminiService {
       );
     }
 
-    const fileData: FileUploadResponse = await uploadResponse.json();
+    const fileData: FileUploadResponse = await uploadResponse.json() as any;
 
     // Step 3: Wait for file to be active
     const activeFile = await this.waitForFileActive(fileData.file.name);
@@ -158,7 +158,7 @@ export class GeminiService {
         );
       }
 
-      const file: FileStatusResponse = await response.json();
+      const file: FileStatusResponse = await response.json() as any;
 
       if (file.state === 'ACTIVE') {
         return file;
@@ -203,7 +203,9 @@ export class GeminiService {
       ],
       generationConfig: {
         response_mime_type: 'application/json',
-        response_schema: schema
+        response_schema: schema,
+        temperature: 0.2,
+        maxOutputTokens: 4096 // Limit output to prevent truncation
       }
     };
 
@@ -240,32 +242,57 @@ export class GeminiService {
 
     const typeSpecificPrompts = {
       document: `
-DOCUMENT TYPE DETECTION:
-First, identify if this is an invoice, receipt, credit note, or other financial document.
-Set the document_type field accordingly.
+You MUST extract these REQUIRED fields from the document:
 
-NUMBER FORMATTING:
-- Extract monetary values exactly as shown
-- Convert to use period (.) as decimal separator
-- Provide all numbers in minor units (cents)
-- For percentages, convert to integer values (20% = 20)
+1. document_type: "invoice" or "receipt"
+2. document_number: Look for invoice/receipt number (e.g., "F232415" near "Factura"/"Invoice")
+3. date: Document date in YYYY-MM-DD format
+4. counterparty.name: Vendor/company name from document header
+5. counterparty.vat_number: NIF/CIF (format: Letter+7-8 digits, e.g., "G01670009")
+6. total_amount: Total in cents (multiply € by 100)
+7. subtotal: Amount before tax in cents
+8. tax_amount: Total VAT amount in cents (sum of all tax bands)
 
-COUNTERPARTY vs RECIPIENT:
-- Counterparty: The supplier/merchant/sender (who issued the document)
-- Recipient: The customer/buyer (who receives the document)
-- For receipts, usually only counterparty (merchant) is present
+9. CRITICAL - tax_breakdown: Extract the COMPLETE IVA/VAT breakdown table AS AN ARRAY.
 
-LINE ITEMS:
-- Extract ALL line items from the document
-- Check all pages for multi-page documents
-- Do NOT extract loyalty cards, cashier numbers, or marketing messages
+   The VAT table typically has 3 columns showing Base Imponible, Percentage IVA, and Cuota.
+   Each ROW represents one tax band. For EACH ROW, extract ALL THREE values together.
 
-DATES:
-- Use ISO 8601 format for receipts with time
-- Use YYYY-MM-DD for invoice dates
-- due_date only applies to invoices
+   Example: If you see a table with these rows:
+   Row 1: Base of 12.75 euros at 21 percent with tax of 2.68 euros
+   Row 2: Base of 21.66 euros at 10 percent with tax of 2.17 euros
+   Row 3: Base of 5.14 euros at 5 percent with tax of 0.26 euros
+   Row 4: Base of 20.42 euros at 0 percent with tax of 0.00 euros
 
-If any field can't be recognized, return null.
+   You must extract as this JSON array (converting euros to cents):
+   [
+     {"tax_rate": 21, "tax_base": 1275, "tax_amount": 268},
+     {"tax_rate": 10, "tax_base": 2166, "tax_amount": 217},
+     {"tax_rate": 5, "tax_base": 514, "tax_amount": 26},
+     {"tax_rate": 0, "tax_base": 2042, "tax_amount": 0}
+   ]
+
+   CRITICAL RULES:
+   - Extract ALL rows from the VAT breakdown table
+   - Each object has 3 values from the SAME row
+   - tax_rate is the percentage column
+   - tax_base is the base amount column (multiply by 100 for cents)
+   - tax_amount is the tax/cuota column (multiply by 100 for cents)
+   - Do NOT mix values from different rows
+   - Do NOT skip rows including 0 percent rates
+   - Do NOT include the totals row
+
+10. line_items: Array of products/services with:
+   - description (text)
+   - quantity (number)
+   - subtotal (cents)
+   - tax_rate (percentage, e.g., 21)
+   - total (cents)
+
+CRITICAL: Extract ALL visible line items AND the complete VAT breakdown table.
+AMOUNTS: Multiply all euro amounts by 100 to get cents.
+NIF/CIF: Extract ONLY the valid ID (Letter + 7-8 digits), ignore extra numbers.
+VAT TABLE: Look for tables with headers like "Base Imponible", "% IVA", "Cuota", "Base", "Type", "Tax", etc.
 `,
       invoice: `
 GERMAN INVOICE TERMINOLOGY - IMPORTANT:
@@ -346,6 +373,11 @@ Populate 'description' field with a short user-relevant summary (e.g., "Dinner i
       throw new GeminiAPIError('Content filtered due to recitation', 400, false);
     }
 
+    if (candidate.finishReason === 'MAX_TOKENS') {
+      console.warn('Response was truncated due to max tokens. Retrying with shorter prompt...');
+      throw new GeminiAPIError('Response truncated - try with smaller document', 400, true);
+    }
+
     const content = candidate.content?.parts?.[0]?.text;
 
     if (!content) {
@@ -353,13 +385,34 @@ Populate 'description' field with a short user-relevant summary (e.g., "Dinner i
     }
 
     try {
+      // Try to parse as-is first
       return JSON.parse(content);
-    } catch (error) {
-      throw new GeminiAPIError(
-        `Failed to parse response as JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        500,
-        false
-      );
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Content preview:', content.substring(0, 500));
+      console.error('Content end:', content.substring(content.length - 500));
+
+      // Try to fix common JSON issues
+      try {
+        // Remove trailing commas before closing braces/brackets
+        let fixedContent = content
+          .replace(/,(\s*[}\]])/g, '$1')
+          .replace(/\\'/g, "'")
+          .trim();
+
+        // Ensure content ends with closing brace
+        if (!fixedContent.endsWith('}')) {
+          fixedContent += '}';
+        }
+
+        return JSON.parse(fixedContent);
+      } catch (secondError) {
+        throw new GeminiAPIError(
+          `Failed to parse response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
+          500,
+          true // Make it retryable
+        );
+      }
     }
   }
 }

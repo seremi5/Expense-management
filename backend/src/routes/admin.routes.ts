@@ -128,8 +128,8 @@ router.patch(
       expenseId: id,
       userId: req.user.userId,
       action: `status_changed_to_${status}`,
-      oldValues: { status: expense.status },
-      newValues: { status, declinedReason, comments },
+      oldValue: { status: expense.status },
+      newValue: { status, declinedReason, comments },
     })
 
     logEvent('Expense status updated', {
@@ -235,6 +235,8 @@ router.patch(
       vat0Amount,
       bankAccount,
       accountHolder,
+      fileUrl,
+      fileName,
       comments,
     } = req.body
 
@@ -264,6 +266,8 @@ router.patch(
     if (vat0Amount !== undefined) updateData.vat0Amount = vat0Amount
     if (bankAccount !== undefined) updateData.bankAccount = bankAccount
     if (accountHolder !== undefined) updateData.accountHolder = accountHolder
+    if (fileUrl !== undefined) updateData.fileUrl = fileUrl
+    if (fileName !== undefined) updateData.fileName = fileName
     if (comments !== undefined) updateData.comments = comments
 
     // Update expense
@@ -274,8 +278,8 @@ router.patch(
       expenseId: id,
       userId: req.user.userId,
       action: 'expense_updated',
-      oldValues: expense,
-      newValues: updateData,
+      oldValue: expense,
+      newValue: updateData,
     })
 
     logEvent('Expense updated', {

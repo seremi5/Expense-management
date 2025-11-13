@@ -3,6 +3,7 @@
  * Tests basic health and detailed health endpoints
  */
 
+import { jest } from '@jest/globals'
 import request from 'supertest'
 import { createApp } from '../../app.js'
 

@@ -15,14 +15,14 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { AnyZodObject, ZodError } from 'zod'
+import { ZodObject, ZodError } from 'zod'
 import { AppError } from '../types/index.js'
 
 /**
  * Generic validation middleware factory
  * Validates request against provided Zod schema
  */
-export function validate(schema: AnyZodObject) {
+export function validate(schema: ZodObject<any>) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Validate and transform request data
@@ -35,11 +35,15 @@ export function validate(schema: AnyZodObject) {
       next()
     } catch (error) {
       if (error instanceof ZodError) {
-        // Format Zod validation errors
-        const errors = error.errors.map((err) => ({
+        // Format Zod validation errors with more detail
+        const errors = (error.issues || []).map((err: any) => ({
           field: err.path.join('.'),
           message: err.message,
+          code: err.code,
+          received: err.code === 'invalid_type' ? (err as any).received : undefined,
         }))
+
+        console.error('Validation errors:', JSON.stringify(errors, null, 2))
 
         next(
           new AppError(400, 'VALIDATION_ERROR', 'Request validation failed', {
@@ -47,6 +51,7 @@ export function validate(schema: AnyZodObject) {
           })
         )
       } else {
+        console.error('Non-Zod validation error:', error)
         next(error)
       }
     }

@@ -54,19 +54,19 @@ export const env = {
   GEMINI_API_URL: process.env.GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta',
   GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
 
-  // Cloudflare R2 Storage
-  R2_ACCOUNT_ID: requireEnv('R2_ACCOUNT_ID', process.env.R2_ACCOUNT_ID),
-  R2_ACCESS_KEY_ID: requireEnv('R2_ACCESS_KEY_ID', process.env.R2_ACCESS_KEY_ID),
-  R2_SECRET_ACCESS_KEY: requireEnv('R2_SECRET_ACCESS_KEY', process.env.R2_SECRET_ACCESS_KEY),
-  R2_BUCKET_NAME: requireEnv('R2_BUCKET_NAME', process.env.R2_BUCKET_NAME),
-  R2_PUBLIC_URL: requireEnv('R2_PUBLIC_URL', process.env.R2_PUBLIC_URL),
+  // Cloudflare R2 Storage (optional for local development)
+  R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID || '',
+  R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || '',
+  R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || '',
+  R2_BUCKET_NAME: process.env.R2_BUCKET_NAME || '',
+  R2_PUBLIC_URL: process.env.R2_PUBLIC_URL || '',
 
-  // Resend Email Service
-  RESEND_API_KEY: requireEnv('RESEND_API_KEY', process.env.RESEND_API_KEY),
+  // Resend Email Service (optional for local development)
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   EMAIL_FROM: process.env.EMAIL_FROM || 'Expense Management <noreply@joventut.cat>',
 
-  // Security
-  FORM_PASSWORD: requireEnv('FORM_PASSWORD', process.env.FORM_PASSWORD),
+  // Security (optional for local development)
+  FORM_PASSWORD: process.env.FORM_PASSWORD || 'dev_password',
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
 
   // CORS

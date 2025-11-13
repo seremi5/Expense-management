@@ -96,8 +96,8 @@ describe('Authentication Validators', () => {
       const result = registerSchema.safeParse(invalidData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        const errors = result.error.errors.map(e => e.message)
-        expect(errors.some(e => e.includes('uppercase'))).toBe(true)
+        const errors = result.error.issues.map((issue: any) => issue.message)
+        expect(errors.some((e: string) => e.includes('uppercase'))).toBe(true)
       }
     })
 
@@ -113,8 +113,8 @@ describe('Authentication Validators', () => {
       const result = registerSchema.safeParse(invalidData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        const errors = result.error.errors.map(e => e.message)
-        expect(errors.some(e => e.includes('lowercase'))).toBe(true)
+        const errors = result.error.issues.map((issue: any) => issue.message)
+        expect(errors.some((e: string) => e.includes('lowercase'))).toBe(true)
       }
     })
 
@@ -130,8 +130,8 @@ describe('Authentication Validators', () => {
       const result = registerSchema.safeParse(invalidData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        const errors = result.error.errors.map(e => e.message)
-        expect(errors.some(e => e.includes('number'))).toBe(true)
+        const errors = result.error.issues.map((issue: any) => issue.message)
+        expect(errors.some((e: string) => e.includes('number'))).toBe(true)
       }
     })
 
@@ -147,8 +147,8 @@ describe('Authentication Validators', () => {
       const result = registerSchema.safeParse(invalidData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        const errors = result.error.errors.map(e => e.message)
-        expect(errors.some(e => e.includes('8 characters'))).toBe(true)
+        const errors = result.error.issues.map((issue: any) => issue.message)
+        expect(errors.some((e: string) => e.includes('8 characters'))).toBe(true)
       }
     })
 
@@ -164,8 +164,8 @@ describe('Authentication Validators', () => {
       const result = registerSchema.safeParse(invalidData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        const errors = result.error.errors.map(e => e.message)
-        expect(errors.some(e => e.includes('2 characters'))).toBe(true)
+        const errors = result.error.issues.map((issue: any) => issue.message)
+        expect(errors.some((e: string) => e.includes('2 characters'))).toBe(true)
       }
     })
 
