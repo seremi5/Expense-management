@@ -149,14 +149,10 @@ export const ocrApi = {
     const formData = new FormData()
     formData.append('file', file)
 
+    // Note: Don't set Content-Type manually - axios will set it with the correct boundary
     const response = await api.post<ApiResponse<OCRExtractResponse>>(
       '/ocr/extract',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+      formData
     )
     return response.data.data!
   },

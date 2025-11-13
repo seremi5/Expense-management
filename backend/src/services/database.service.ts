@@ -52,6 +52,11 @@ export async function updateProfile(
   id: string,
   data: Partial<Omit<NewProfile, 'id'>>
 ): Promise<Profile | undefined> {
+  // If no data to update, just return the current profile
+  if (Object.keys(data).length === 0) {
+    return findProfileById(id)
+  }
+
   const [updated] = await db
     .update(profiles)
     .set(data)

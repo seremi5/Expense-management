@@ -7,8 +7,12 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { OCRService } from '../services/ocr.service.js';
 import { HTTP_STATUS, ERROR_MESSAGES } from '../config/constants.js';
+import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = Router();
+
+// Apply authentication to all OCR routes
+router.use(authenticate);
 
 // Configure multer for memory storage
 const upload = multer({
