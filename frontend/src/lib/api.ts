@@ -117,6 +117,11 @@ export const adminApi = {
     return response.data.data!
   },
 
+  updateExpense: async (id: string, data: Partial<Expense>): Promise<Expense> => {
+    const response = await api.patch<ApiResponse<Expense>>(`/admin/expenses/${id}`, data)
+    return response.data.data!
+  },
+
   updateExpenseStatus: async (
     id: string,
     data: UpdateExpenseStatusRequest
