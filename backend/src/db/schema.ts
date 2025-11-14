@@ -4,36 +4,38 @@ import { relations } from 'drizzle-orm';
 // Enums
 export const roleEnum = pgEnum('role', ['admin', 'viewer']);
 
-export const eventEnum = pgEnum('event', [
-  'mwc_barcelona',
-  '4yfn_barcelona',
-  'gitex_dubai',
-  'websummit_lisbon',
-  'slush_helsinki',
-  'ces_las_vegas',
-  'sxsw_austin',
-  'techcrunch_disrupt',
-  'collision_toronto',
-  'viva_tech_paris',
-  'dreamforce_san_francisco',
-  'google_io',
-  'other'
-]);
+// Note: event and category are now stored as TEXT to allow flexible values from the events/categories tables
+// Previously used hardcoded enums - commented out for reference:
+// export const eventEnum = pgEnum('event', [
+//   'mwc_barcelona',
+//   '4yfn_barcelona',
+//   'gitex_dubai',
+//   'websummit_lisbon',
+//   'slush_helsinki',
+//   'ces_las_vegas',
+//   'sxsw_austin',
+//   'techcrunch_disrupt',
+//   'collision_toronto',
+//   'viva_tech_paris',
+//   'dreamforce_san_francisco',
+//   'google_io',
+//   'other'
+// ]);
 
-export const categoryEnum = pgEnum('category', [
-  'accommodation',
-  'transportation',
-  'meals',
-  'entertainment',
-  'marketing',
-  'booth_setup',
-  'technology',
-  'office_supplies',
-  'professional_services',
-  'insurance',
-  'training',
-  'other'
-]);
+// export const categoryEnum = pgEnum('category', [
+//   'accommodation',
+//   'transportation',
+//   'meals',
+//   'entertainment',
+//   'marketing',
+//   'booth_setup',
+//   'technology',
+//   'office_supplies',
+//   'professional_services',
+//   'insurance',
+//   'training',
+//   'other'
+// ]);
 
 export const expenseTypeEnum = pgEnum('expense_type', [
   'reimbursable',
@@ -99,8 +101,8 @@ export const expenses = pgTable('expenses', {
   surname: text('surname').notNull(),
 
   // Expense Classification
-  event: eventEnum('event').notNull(),
-  category: categoryEnum('category').notNull(),
+  event: text('event').notNull(),
+  category: text('category').notNull(),
   type: expenseTypeEnum('type').notNull(),
 
   // Invoice Details
