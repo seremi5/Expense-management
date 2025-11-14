@@ -40,40 +40,54 @@ async function seedData() {
   try {
     console.log('🌱 Starting database seed...')
 
-    // Check if data already exists
+    // Check existing data
     const existingCategories = await db.select().from(categories)
     const existingEvents = await db.select().from(events)
 
-    if (existingCategories.length > 0 || existingEvents.length > 0) {
-      console.log('⚠️  Data already exists. Skipping seed.')
-      console.log(`   Categories: ${existingCategories.length}`)
-      console.log(`   Events: ${existingEvents.length}`)
-      process.exit(0)
-    }
+    console.log(`   Found ${existingCategories.length} existing categories`)
+    console.log(`   Found ${existingEvents.length} existing events`)
+
+    // Get existing keys
+    const existingCategoryKeys = new Set(existingCategories.map(c => c.key))
+    const existingEventKeys = new Set(existingEvents.map(e => e.key))
+
+    // Filter out items that already exist
+    const categoriesToAdd = initialCategories.filter(cat => !existingCategoryKeys.has(cat.key))
+    const eventsToAdd = initialEvents.filter(evt => !existingEventKeys.has(evt.key))
 
     // Seed categories
-    console.log(`📦 Seeding ${initialCategories.length} categories...`)
-    await db.insert(categories).values(
-      initialCategories.map((cat) => ({
-        key: cat.key,
-        label: cat.label,
-        isActive: 'true',
-      }))
-    )
-    console.log('✅ Categories seeded successfully')
+    if (categoriesToAdd.length > 0) {
+      console.log(`📦 Seeding ${categoriesToAdd.length} new categories...`)
+      await db.insert(categories).values(
+        categoriesToAdd.map((cat) => ({
+          key: cat.key,
+          label: cat.label,
+          isActive: 'true',
+        }))
+      )
+      console.log('✅ Categories seeded successfully')
+    } else {
+      console.log('⏭️  All categories already exist')
+    }
 
     // Seed events
-    console.log(`📅 Seeding ${initialEvents.length} events...`)
-    await db.insert(events).values(
-      initialEvents.map((evt) => ({
-        key: evt.key,
-        label: evt.label,
-        isActive: 'true',
-      }))
-    )
-    console.log('✅ Events seeded successfully')
+    if (eventsToAdd.length > 0) {
+      console.log(`📅 Seeding ${eventsToAdd.length} new events...`)
+      await db.insert(events).values(
+        eventsToAdd.map((evt) => ({
+          key: evt.key,
+          label: evt.label,
+          isActive: 'true',
+        }))
+      )
+      console.log('✅ Events seeded successfully')
+    } else {
+      console.log('⏭️  All events already exist')
+    }
 
-    console.log('🎉 Database seed completed successfully!')
+    console.log('🎉 Database seed completed!')
+    console.log(`   Total categories: ${existingCategories.length + categoriesToAdd.length}`)
+    console.log(`   Total events: ${existingEvents.length + eventsToAdd.length}`)
     process.exit(0)
   } catch (error) {
     console.error('❌ Seed failed:', error)
